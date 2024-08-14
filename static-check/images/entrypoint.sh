@@ -9,22 +9,23 @@ command -v jq >/dev/null 2>&1 || { echo >&2 "jq命令未找到，请先安装jq�
 #linuxdeepin/dde-daemon/pull/407
 # reviews-team-test/test_jenkins/pull/6/files
 # https://github.com/linuxdeepin/dde-session-ui/pull/337
+# https://github.com/peeweep-test/test-ci-check/pull/1
 if [ -z "$REPO_OWNER" ]; then
-    # export REPO_OWNER="peeweep-test"
-    export REPO_OWNER="linuxdeepin"
+    export REPO_OWNER="peeweep-test"
+    # export REPO_OWNER="linuxdeepin"
     # export REPO_OWNER="reviews-team-test"
 fi
 
 if [ -z "$REPO_NAME" ]; then
-    # export REPO_NAME="test-ci-check"
-    export REPO_NAME="dde-session-ui"
+    export REPO_NAME="test-ci-check"
+    # export REPO_NAME="dde-session-ui"
     # export REPO_NAME="dde-daemon"
     # export REPO_NAME="test_jenkins"
 fi
 
 
 if [ -z "$PULL_NUMBER" ]; then
-    export PULL_NUMBER="337"
+    export PULL_NUMBER="1"
 fi
 
 REPO="${REPO_OWNER}/${REPO_NAME}"
@@ -84,7 +85,7 @@ startCppCheck(){
         --template="{file},{line},{severity},{id},{message}" 2> $commentLog || true
     errNum=$(awk -F',' '$3 == "error"' ${commentLog} | wc -l)
     if [ "$errNum" -gt "0" ];then
-        echo "cppcheck检查失败, 检测到${errNum}个error;" >> comment.txt
+        echo "cppcheck检查失败, 检测到${errNum}个error;" | tee -a comment.txt
         awk -F',' '$3 == "error"' ${commentLog} >> comment.txt
     else
         echo "cppcheck检查成功"
@@ -102,14 +103,14 @@ startTscancode(){
     tscancode --enable=all `cat tscancode-files.txt` 2> $commentLog || true
     errNum=$(awk '{ if ($2 == "(Serious)" || $2 == "(Critical)") print $0 }' ${commentLog} | wc -l)
     if [ "$errNum" -gt "0" ];then
-        echo "tscancode检查失败, 检测到${errNum}个error;" >> comment.txt
+        echo "tscancode检查失败, 检测到${errNum}个error;" | tee -a comment.txt
         awk '{ if ($2 == "(Serious)" || $2 == "(Critical)") print $0 }' ${commentLog} >> comment.txt
     else
         echo "tscancode检查成功"
     fi
 }
 
-startgosec(){
+startGosec(){
     ! [ -s 'gosec-files.txt' ] && echo "无对应文件可供检测, gosec检测退出!!" && return
     [ -d "gosecReport" ] && rm -rf gosecReport
     mkdir gosecReport
@@ -120,7 +121,7 @@ startgosec(){
         errNum=$(cat $logdir | jq '.Issues | select(.severity != "HIGH")' | wc -l)
     fi
     if [ "$errNum" -gt "0" ];then
-        echo "gosec检查失败, 检测到${errNum}个error;" >> comment.txt
+        echo "gosec检查失败, 检测到${errNum}个error;" | tee -a comment.txt
         cat $logdir
     else
         echo "gosec检查成功"
@@ -144,7 +145,7 @@ startGolangciLint(){
     golangci-lint run --timeout=10m -c .golangci.yml --new-from-rev=HEAD~1 --out-format junit-xml | tee $logdir || true
     errNum=$(egrep "[[:space:]]+<error .*message=" ${logdir} | wc -l)
     if [ "$errNum" -gt "0" ];then
-        echo "golangci-lint检查失败, 检测到${errNum}个error;" >> comment.txt
+        echo "golangci-lint检查失败, 检测到${errNum}个error;" | tee -a comment.txt
         cat $logdir
     else
         echo "golangci-lint检查成功"
@@ -159,7 +160,7 @@ startShellCheck(){
     cat shellcheck-files.txt | xargs shellcheck -f gcc > $commentLog || true
     errNum=$(awk -F':' '$4 == " error"' ${commentLog} | wc -l)
     if [ "$errNum" -gt "0" ];then
-        echo "shellcheck检查失败, 检测到${errNum}个error;" >> comment.txt
+        echo "shellcheck检查失败, 检测到${errNum}个error;" | tee -a comment.txt
         awk -F':' '$4 == " error"' ${commentLog} >> comment.txt
     else
         echo "shellcheck检查成功"
