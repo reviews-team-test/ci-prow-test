@@ -85,7 +85,7 @@ startCppCheck(){
         --template="{file},{line},{severity},{id},{message}" 2> $commentLog || true
     errNum=$(awk -F',' '$3 == "error"' ${commentLog} | wc -l)
     if [ "$errNum" -gt "0" ];then
-        echo "cppcheck检查失败, 检测到${errNum}个error;" | tee -a comment.txt
+        echo "cppcheck检查失败, 检测到${errNum}个error: " | tee -a comment.txt
         awk -F',' '$3 == "error"' ${commentLog} >> comment.txt
     else
         echo "cppcheck检查成功"
@@ -103,7 +103,7 @@ startTscancode(){
     tscancode --enable=all `cat tscancode-files.txt` 2> $commentLog || true
     errNum=$(awk '{ if ($2 == "(Serious)" || $2 == "(Critical)") print $0 }' ${commentLog} | wc -l)
     if [ "$errNum" -gt "0" ];then
-        echo "tscancode检查失败, 检测到${errNum}个error;" | tee -a comment.txt
+        echo "tscancode检查失败, 检测到${errNum}个error: " | tee -a comment.txt
         awk '{ if ($2 == "(Serious)" || $2 == "(Critical)") print $0 }' ${commentLog} >> comment.txt
     else
         echo "tscancode检查成功"
@@ -160,7 +160,7 @@ startShellCheck(){
     cat shellcheck-files.txt | xargs shellcheck -f gcc > $commentLog || true
     errNum=$(awk -F':' '$4 == " error"' ${commentLog} | wc -l)
     if [ "$errNum" -gt "0" ];then
-        echo "shellcheck检查失败, 检测到${errNum}个error;" | tee -a comment.txt
+        echo "shellcheck检查失败, 检测到${errNum}个error: " | tee -a comment.txt
         awk -F':' '$4 == " error"' ${commentLog} >> comment.txt
     else
         echo "shellcheck检查成功"
