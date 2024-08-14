@@ -1,0 +1,10 @@
+
+	--- CHECK CHANGE IN <dde-blackwidget/window.h> ---
+[Chg_exprort_fun] : <class:Window> below
+		del [bool Window::m_gravityRotateBlackEnabled]
+
+	--- CHECK CHANGE IN <dde-osd/notification/actionbutton.h> ---
+[Del_fun] : QSize ActionButton::contentSize(const QString & text,bool has_menu=false) cons) 
+[Del_fun] : QSize contentSize(const QString & text,bool has_menu=false) cons) 
+[Add_fun] : QSize ActionButton::contentSize(const QString & text,bool is_menu=false) cons) 
+[Add_fun] : QSize contentSize(const QString & text,bool is_menu=false) cons) 

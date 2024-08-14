@@ -1,0 +1,34 @@
+# action.yml
+name: 'debiancheck and review'
+branding:
+  icon: 'check'
+  color: 'green'
+description: 'check pull request with debiancheck and post result to review comments'
+inputs:
+  repo-owner:
+    description: 'repo owner'
+    required: true
+  repo-name:
+    description: 'repo name'
+    required: true
+  pull-number:
+    description: 'pull number'
+    required: true
+  app-id:
+    description: 'app_id for organizations'
+    required: true
+  app-private-key:
+    description: 'private_key for organizations'
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    REPO_OWNER: ${{ inputs.repo-owner }}
+    REPO_NAME: ${{ inputs.repo-name }}
+    PULL_NUMBER: ${{ inputs.pull-number }}
+    APP_ID: ${{ inputs.app-id }}
+    APP_PRIVATE_KEY: ${{ inputs.app-private-key }}
+
+

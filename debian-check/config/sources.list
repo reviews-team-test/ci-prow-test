@@ -1,0 +1,2 @@
+#deb [trusted=yes] http://pools.uniontech.com/desktop-professional/ eagle main contrib non-free
+deb http://pools.uniontech.com/desktop-professional/ eagle main contrib non-free

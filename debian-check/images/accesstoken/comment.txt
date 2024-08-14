@@ -1,0 +1,4 @@
+\[Debian检查\]:
+检测到debian目录文件有变更: debian/test.log
+检测到敏感词lshw变动
+检测到敏感词export变动
