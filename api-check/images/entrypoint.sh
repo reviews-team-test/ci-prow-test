@@ -58,7 +58,7 @@ startRun(){
     deepin-abigail -c fastFilesCompare.json | tee api_check.txt || true
 }
 
-# 3. 分析结果
+# 3. 分析结果并添加评论
 getResult(){
     if [ -e "api_check.txt" ];then
         apiCheckResult=$(egrep "\[Chg_exprort_fun\]|\[Del_export_fun\]" api_check.txt | wc -l)

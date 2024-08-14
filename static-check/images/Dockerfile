@@ -3,7 +3,7 @@ FROM golang:alpine
 ADD tools/cppcheck-2.8.zip /go/cppcheck-2.8.zip
 COPY tools/glibc-2.35-r0.apk /go/glibc-2.35-r0.apk
 COPY tools/glibc-bin-2.35-r0.apk /go/glibc-bin-2.35-r0.apk
-ADD postAction.py /postAction.py
+ADD postAction.py /go/postAction.py
 ADD entrypoint.sh /entrypoint.sh
 
 # alpine repository mirror settings
@@ -13,7 +13,7 @@ RUN cp /etc/apk/repositories /etc/apk/repositories.bak; \
   echo "https://mirror.tuna.tsinghua.edu.cn/alpine/edge/testing" >> /etc/apk/repositories; \
   apk update && apk upgrade
 
-RUN apk --no-cache add curl git jq python3 build-base shellcheck; \
+RUN apk --no-cache add py3-requests curl git jq build-base shellcheck; \
     mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2; \
     unzip cppcheck-2.8.zip && cd cppcheck-2.8 && \
     make install SRCDIR=build CFGDIR=/usr/bin/cfg FILESDIR=/usr/bin -j 16;\
