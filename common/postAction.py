@@ -169,14 +169,12 @@ def createIssueComment(commenMsg):
 
 def createPRComment(checkType):
     if checkType == 'debian-check':
-        commenHead = '\\[Debian检查\\]:'
-        commentFile = 'comment.txt'        
+        commenHead = '\\[Debian检查\\]'      
     if checkType == 'api-check':
-        commenHead = '\\[API接口检查\\]:'
-        commentFile = 'api_check.txt'
+        commenHead = '\\[API接口检查\\]'
     if checkType == 'static-check':
-        commenHead = '\\[静态代码检查\\]:'
-        commentFile = 'comment.txt'
+        commenHead = '\\[静态代码检查\\]'
+    commentFile = 'comment.txt'
     writeHeadToCommentFile(commenHead, commentFile)
     commenMsg = ''
     with open(commentFile, 'r', encoding='utf-8') as fp:

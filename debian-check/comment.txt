@@ -1,5 +1,0 @@
-\[Debian检查\]:
-debian/changelog版本检查失败:4:5.27.2.201-deepin200-1|4:5.27.2.201-deepin201-1
-检测到debian目录文件有变更:['debian/test.log']
-检测到敏感词dmidecode/lshw变动
-检测到敏感词export/unset变动

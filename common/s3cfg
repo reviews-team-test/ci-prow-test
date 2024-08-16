@@ -1,0 +1,6 @@
+host_base = ciossapi-dev.uniontech.com
+host_bucket = ciossapi-dev.uniontech.com
+use_https = False
+
+access_key =  XEvYlH44BFgOCJGY
+secret_key = Ac9IQHtX1OGJs6j0kP5nQAkwi3Jsq7h3

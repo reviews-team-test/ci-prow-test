@@ -154,9 +154,7 @@ startShellCheck(){
     [ -d "shellcheckReport" ] && rm -rf shellcheckReport
     mkdir shellcheckReport
     logdir="shellcheckReport/${REPO_NAME}-shellcheck-report.xml"
-    commentLog="shellcheckReport/${REPO_NAME}-shellcheck-report.log"
     cat shellcheck-files.txt | xargs shellcheck -f checkstyle > $logdir || true
-    cat shellcheck-files.txt | xargs shellcheck -f gcc > $commentLog || true
     errNum=$(egrep "severity='error'" ${logdir} | wc -l)
     if [ "$errNum" -gt "0" ];then
         echo "shellcheck检查失败, 检测到${errNum}个error;" >> comment.txt

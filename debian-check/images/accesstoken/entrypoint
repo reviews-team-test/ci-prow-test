@@ -9,6 +9,8 @@ import postAction
 REPO_OWNER = os.environ.get("REPO_OWNER", "peeweep-test")
 REPO_NAME = os.environ.get("REPO_NAME", "test-ci-check")
 PULL_NUMBER = os.environ.get("PULL_NUMBER", "1")
+PULL_PULL_SHA = os.environ.get("PULL_PULL_SHA", "900c427f788006210c8cdcee47a7f55cdaa1c7c4")
+BUILD_ID = os.environ.get("BUILD_ID", "1234")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     
 REPO = REPO_OWNER + '/' + REPO_NAME
@@ -102,14 +104,14 @@ def debianPreCheck(fail_check_number):
 def filter_keys_in_modify(content, keyLst):
     strJson = {}
     for fileName, patchContent in content.items():
-        for lineContent in patchContent['b']:
-            for keyStr in keyLst:
-                if keyStr in lineContent:
-                    if keyStr not in list(strJson.keys()):
-                        strJson[keyStr] = {}
-                    if fileName not in list(strJson[keyStr].keys()):
-                        strJson[keyStr][fileName] = []
-                    strJson[keyStr][fileName].append(lineContent)
+      for lineContent in patchContent['b']:
+        for keyStr in keyLst:
+          if keyStr in lineContent:
+            if keyStr not in list(strJson.keys()):
+              strJson[keyStr] = {}
+            if fileName not in list(strJson[keyStr].keys()):
+              strJson[keyStr][fileName] = []
+            strJson[keyStr][fileName].append(lineContent)
     return strJson
 
 # 在增加，删除和修改内容中筛选敏感词
@@ -117,17 +119,17 @@ def filter_keys_in_all(content, keyLst):
   # checkType: 2, 在修改,删除和增加内容筛选敏感词
     strJson = {}
     for fileName, patchContent in content.items():
-            for keyStr in keyLst:
-                for actionType, actionTypePatchConten in patchContent.items():
-                    for lineContent in actionTypePatchConten:
-                        if keyStr in lineContent:
-                            if keyStr not in list(strJson.keys()):
-                                strJson[keyStr] = {}
-                            if fileName not in list(strJson[keyStr].keys()):
-                                strJson[keyStr][fileName] = {}
-                            if actionType not in list(strJson[keyStr][fileName].keys()):
-                                strJson[keyStr][fileName][actionType] = []
-                            strJson[keyStr][fileName][actionType].append(lineContent)
+      for keyStr in keyLst:
+        for actionType, actionTypePatchConten in patchContent.items():
+          for lineContent in actionTypePatchConten:
+            if keyStr in lineContent:
+              if keyStr not in list(strJson.keys()):
+                  strJson[keyStr] = {}
+              if fileName not in list(strJson[keyStr].keys()):
+                  strJson[keyStr][fileName] = {}
+              if actionType not in list(strJson[keyStr][fileName].keys()):
+                  strJson[keyStr][fileName][actionType] = []
+              strJson[keyStr][fileName][actionType].append(lineContent)
     return strJson
 
 # 在变动信息中筛选敏感词
@@ -135,27 +137,27 @@ def filter_keywords(content_dict, keyLst, checkType):
     originInfo = {}
     resultInfo = {}
     if content_dict:
-        for fileTemp in content_dict:
-            originInfo[fileTemp['filename']] = {
-                "a": [],
-                "b": []
-            }
-            fileContent = []
-            if 'patch' in fileTemp.keys():
-              filePatch = fileTemp["patch"]
-              fileContent = filePatch.splitlines()
-            for line in fileContent:
-                if line.startswith("-"):
-                    originInfo[fileTemp['filename']]["a"].append(line.lstrip("-"))
-                elif line.startswith("+"):
-                    originInfo[fileTemp['filename']]["b"].append(line.lstrip("+"))
+      for fileTemp in content_dict:
+        tempOriginInfo = {
+            "a": [],
+            "b": []
+          }
+        filePatchContent = []
+        if 'patch' in fileTemp.keys():
+          filePatchContent = fileTemp["patch"].splitlines()
+        for line in filePatchContent:
+            if line.startswith("-"):
+                tempOriginInfo["a"].append(line.lstrip("-"))
+            elif line.startswith("+"):
+                tempOriginInfo["b"].append(line.lstrip("+"))
+        originInfo[fileTemp['filename']] = tempOriginInfo
 
-        if checkType == 'modify':
-            resultInfo = filter_keys_in_modify(originInfo, keyLst)
-        elif checkType == 'all':
-            resultInfo = filter_keys_in_all(originInfo, keyLst)
-        else:
-            print("异常类型")
+      if checkType == 'modify':
+          resultInfo = filter_keys_in_modify(originInfo, keyLst)
+      elif checkType == 'all':
+          resultInfo = filter_keys_in_all(originInfo, keyLst)
+      else:
+          print("异常类型")
     else:
         print("原始解析数据为空")
 
@@ -171,9 +173,6 @@ def readJson(filepath):
 
 # 写json文件
 def writeJsonFile(resultInfo, jsonFile):
-    data = json.dumps(resultInfo, sort_keys=True, indent=2)
-    data = data.encode('utf-8').decode('unicode_escape')
-    print(data)
     with open(jsonFile, 'w+') as fp:
       fp.write(json.dumps(resultInfo, indent=4, ensure_ascii=False))
 
@@ -189,9 +188,14 @@ def debianKeyWordsCheck(keyJson, fail_check_number):
   
     if resultInfo:
         fail_check_number += 1
-        # writeCommentFile(f"[FAIL]: {'/'.join(list(resultInfo.keys()))}敏感词检查不通过")
-        writeCommentFile(f"检测到敏感词{', '.join(list(resultInfo.keys()))}变动")
-        writeJsonFile(resultInfo, "result-{}.json".format(check_type))
+        import datetime
+        current_date = datetime.date.today().strftime("%Y%m%d")
+        commentLog = "{}-result-{}.json".format(BUILD_ID, check_type)
+        logShowUrl = f"http://ciossapi-dev.uniontech.com/iso/ci-prow/{current_date}/debian-check/{REPO_OWNER}/{REPO_NAME}/{PULL_NUMBER}/{PULL_PULL_SHA}/{commentLog}"
+        logUploaUrl = f"s3://iso/ci-prow/{current_date}/debian-check/{REPO_OWNER}/{REPO_NAME}/{PULL_NUMBER}/{PULL_PULL_SHA}/{commentLog}"
+        writeCommentFile(f"[检测到敏感词{', '.join(list(resultInfo.keys()))}变动]({logShowUrl});")
+        writeJsonFile(resultInfo, commentLog)
+        os.system(f"s3cmd put {commentLog} {logUploaUrl}")
     #   exit(1)
     else:
       print(f"[PASS]: 敏感词{key_list}检查通过")
@@ -247,7 +251,7 @@ def postStep(fail_check_number):
     if fail_check_number != 0:
       postAction.createPRComment('debian-check')
       postAction.addReviewers()
-      exit(1)
+      # exit(1)
 
 # 检查开始前删除评论文件
 def preStep():

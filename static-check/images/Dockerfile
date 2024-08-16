@@ -5,6 +5,7 @@ COPY tools/glibc-2.35-r0.apk /go/glibc-2.35-r0.apk
 COPY tools/glibc-bin-2.35-r0.apk /go/glibc-bin-2.35-r0.apk
 ADD postAction.py /go/postAction.py
 ADD entrypoint.sh /entrypoint.sh
+ADD s3cfg ~/.s3cfg
 
 # alpine repository mirror settings
 RUN cp /etc/apk/repositories /etc/apk/repositories.bak; \
@@ -13,13 +14,13 @@ RUN cp /etc/apk/repositories /etc/apk/repositories.bak; \
   echo "https://mirror.tuna.tsinghua.edu.cn/alpine/edge/testing" >> /etc/apk/repositories; \
   apk update && apk upgrade
 
-RUN apk --no-cache add py3-requests curl git jq build-base shellcheck; \
+RUN apk --no-cache add py3-requests curl git jq build-base shellcheck s3cmd; \
     mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2; \
     unzip cppcheck-2.8.zip && cd cppcheck-2.8 && \
     make install SRCDIR=build CFGDIR=/usr/bin/cfg FILESDIR=/usr/bin -j 16;\
     rm -rf cppcheck-2.8 cppcheck-2.8.zip; \
     curl -o tscancode.tgz https://ci.uniontech.com/atreport/tools/tscancode.tgz && \
-    tar -xzf tscancode.tgz && mv tscancode /usr/local/bin/;mkdir /go/tscancode-cfg && mv cfg /go/tscancode-cfg/; \
+    tar -xzf tscancode.tgz && mv tscancode /usr/local/bin/; \
     apk add --no-cache -U libstdc++; \
     apk add --allow-untrusted --force-overwrite glibc-2.35-r0.apk; \
     apk add --allow-untrusted --force-overwrite glibc-bin-2.35-r0.apk; \

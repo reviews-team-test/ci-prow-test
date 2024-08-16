@@ -1,9 +1,0 @@
-{
-    "export": {
-        "README.md": {
-            "b": [
-                "echo \"export888\"11"
-            ]
-        }
-    }
-}
