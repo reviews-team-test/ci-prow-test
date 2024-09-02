@@ -9,16 +9,25 @@ if [ -z "$REPO_OWNER" ]; then
 fi
 
 if [ -z "$REPO_NAME" ]; then
-    # export REPO_NAME="test-ci-check"
-    export REPO_NAME="dde-shell-test"
+    export REPO_NAME="test-ci-check"
+    # export REPO_NAME="dde-shell-test"
 fi
 
 if [ -z "$PULL_BASE_REF" ]; then
-    export PULL_BASE_REF="master"
+    # export PULL_BASE_REF="master"
+    export PULL_BASE_REF="main"
 fi
 
 if [ -z "$PULL_NUMBER" ]; then
     export PULL_NUMBER="1"
+fi
+
+if [ -z "$PULL_PULL_SHA" ]; then
+    export PULL_PULL_SHA="123456"
+fi
+
+if [ -z "$BUILD_ID" ]; then
+    export BUILD_ID="1"
 fi
 
 current_date=$(date +%Y%m%d)
@@ -66,14 +75,16 @@ startRun(){
     apiCheckResult=$(egrep "\[Chg_exprort_fun\]|\[Del_export_fun\]" ${commentLog} | wc -l || true)
     if [ "$apiCheckResult" -gt "0" ];then
         echo "API接口检查失败"
-        echo "[检测到存在对外接口删除或修改](${logShowUrl}${commentLog});" | tee -a comment.txt
-        s3cmd put ${commentLog} "${logUploaUrl}${commentLog}"
+        # echo "[检测到存在对外接口删除或修改](${logShowUrl}${commentLog});" | tee -a comment.txt
+        cat ${commentLog} | tee -a comment.txt
+        sed -i '1i [API接口检查]:\nAPI接口检查检测到存在对外接口删除:' comment.txt
         # 4. 添加评论
         python3 -c "from postAction import createPRComment; createPRComment('api-check')"
         # exit 1
     else
         echo "API接口检查成功"
     fi
+    s3cmd put ${commentLog} "${logUploaUrl}${commentLog}" || true
 }
 
 downloadLatestCode

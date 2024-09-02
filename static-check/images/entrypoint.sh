@@ -23,7 +23,6 @@ if [ -z "$REPO_NAME" ]; then
     # export REPO_NAME="test_jenkins"
 fi
 
-
 if [ -z "$PULL_NUMBER" ]; then
     export PULL_NUMBER="1"
 fi
@@ -97,11 +96,14 @@ startCppCheck(){
     cppcheck --enable=all --suppress='*:*3rdparty*' --library=./qt.cfg `cat cppcheck-files.txt` --xml 2> $commentLog || true
     errNum=$(egrep "[[:space:]]+<error .*severity=\"error\"" $commentLog | wc -l || true)
     if [ "$errNum" -gt "0" ];then
-        echo "[cppcheck检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
-        s3cmd put $commentLog "${logUploaUrl}${commentLog}"
+        echo "cppcheck检查失败"
+        # echo "[cppcheck检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
+        cat $commentLog | tee -a comment.txt
+        sed -i "1i cppcheck检测到${errNum}个error;" comment.txt
     else
         echo "cppcheck检查成功"
     fi
+    s3cmd put $commentLog "${logUploaUrl}${commentLog}" || true
 }
 
 startTscancode(){
@@ -115,11 +117,14 @@ startTscancode(){
     tscancode --xml --enable=all `cat tscancode-files.txt` -q 2> $commentLog || true
     errNum=$(egrep "[[:space:]]+<error .*severity=\"Serious\"|[[:space:]]+<error .*severity=\"Critical\"" $commentLog | wc -l || true)
     if [ "$errNum" -gt "0" ];then
-        echo "[tscancode检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
-        s3cmd put $commentLog "${logUploaUrl}${commentLog}"
+        echo "tscancode检查失败"
+        # echo "[tscancode检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
+        cat $commentLog | tee -a comment.txt
+        sed -i "1i tscancode检测到${errNum}个error;" comment.txt
     else
         echo "tscancode检查成功"
     fi
+    s3cmd put $commentLog "${logUploaUrl}${commentLog}" || true
 }
 
 startGosec(){
@@ -133,11 +138,14 @@ startGosec(){
         errNum=$(cat $commentLog | jq '.Issues | select(.severity != "HIGH")' | wc -l || true)
     fi
     if [ "$errNum" -gt "0" ];then
-        echo "[gosec检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
-        s3cmd put $commentLog "${logUploaUrl}${commentLog}"
+        echo "gosec检查失败"
+        # echo "[gosec检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
+        cat $commentLog | tee -a comment.txt
+        sed -i "1i gosec检测到${errNum}个error;" comment.txt
     else
         echo "gosec检查成功"
     fi
+    s3cmd put $commentLog "${logUploaUrl}${commentLog}" || true
 }
 
 startGolangciLint(){
@@ -157,11 +165,14 @@ startGolangciLint(){
     golangci-lint run --timeout=10m -c .golangci.yml --new-from-rev=HEAD~1 --out-format junit-xml | tee $commentLog || true
     errNum=$(egrep "[[:space:]]+<error .*message=" ${commentLog} | wc -l || true)
     if [ "$errNum" -gt "0" ];then
-        echo "[golangci-lint检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
-        s3cmd put $commentLog "${logUploaUrl}${commentLog}"
+        echo "golangci-lint检查失败"
+        # echo "[golangci-lint检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
+        cat $commentLog | tee -a comment.txt
+        sed -i "1i golangci-lint检测到${errNum}个error;" comment.txt
     else
         echo "golangci-lint检查成功"
     fi
+    s3cmd put $commentLog "${logUploaUrl}${commentLog}" || true
 }
 
 startShellCheck(){
@@ -172,11 +183,14 @@ startShellCheck(){
     cat shellcheck-files.txt | xargs shellcheck -f checkstyle > $commentLog || true
     errNum=$(egrep "severity='error'" ${commentLog} | wc -l || true)
     if [ "$errNum" -gt "0" ];then
-        echo "[shellcheck检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
-        s3cmd put $commentLog "${logUploaUrl}${commentLog}"
+        echo "shellcheck检查失败"
+        # echo "[shellcheck检查失败, 检测到${errNum}个error](${logShowUrl}${commentLog});" | tee -a comment.txt
+        cat $commentLog | tee -a comment.txt
+        sed -i "1i shellcheck检测到${errNum}个error;" comment.txt
     else
         echo "shellcheck检查成功"
     fi
+    s3cmd put $commentLog "${logUploaUrl}${commentLog}" || true
 }
 
 getPrimaryLanguage(){
