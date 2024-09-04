@@ -23,9 +23,7 @@ exFilesLstForDebian = ["debian/changelog", "debian/copyright", "debian/compat", 
 exSuffLstForKeys = ['js','vue','ts','less','html','go','css','json','txt','doc','jpg','png','svg','py','yml','md']
 # 环境设置敏感词检查仓库白名单
 exProjectLstForEnvKeys = ["deviceos/oem/base/agent", "deviceos/oem/gw/oem", "deviceos/oem/html/oem", "deviceos/oem/html/oemadmin"]
-# reviewers
-# reviewers = 'ckux'
-# team_reviewers = 'Package-admins'
+
 
 keyJson = {
   "modify": "getcap,setcap,lshw,dmidecode",
@@ -191,9 +189,11 @@ def debianKeyWordsCheck(keyJson, fail_check_number):
         import datetime
         current_date = datetime.date.today().strftime("%Y%m%d")
         commentLog = "{}-result-{}.json".format(BUILD_ID, check_type)
-        logShowUrl = f"http://ciossapi-dev.uniontech.com/iso/ci-prow/{current_date}/debian-check/{REPO_OWNER}/{REPO_NAME}/{PULL_NUMBER}/{PULL_PULL_SHA}/{commentLog}"
+        kanbanUrl = f"https://prow.cicd.getdeepin.org/log?job=debian-check&id={BUILD_ID}"
+        # logShowUrl = f"http://ciossapi-dev.uniontech.com/iso/ci-prow/{current_date}/debian-check/{REPO_OWNER}/{REPO_NAME}/{PULL_NUMBER}/{PULL_PULL_SHA}/{commentLog}"
         logUploaUrl = f"s3://iso/ci-prow/{current_date}/debian-check/{REPO_OWNER}/{REPO_NAME}/{PULL_NUMBER}/{PULL_PULL_SHA}/{commentLog}"
-        writeCommentFile(f"[检测到敏感词{', '.join(list(resultInfo.keys()))}变动]({logShowUrl});")
+        writeCommentFile(f"[检测到敏感词{', '.join(list(resultInfo.keys()))}变动]({kanbanUrl});")
+        print(resultInfo)
         writeJsonFile(resultInfo, commentLog)
         os.system(f"s3cmd put {commentLog} {logUploaUrl}")
     #   exit(1)
@@ -249,6 +249,7 @@ def writeCommentFile(commentMsg):
 # post步骤: 任务失败进行评论和添加reviewers
 def postStep(fail_check_number):
     if fail_check_number != 0:
+      writeCommentFile("请联系系统开发review:\n/assign @liujianqiang-niu\n/hold")
       postAction.createPRComment('debian-check')
       postAction.addReviewers()
       # exit(1)

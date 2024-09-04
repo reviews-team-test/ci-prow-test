@@ -76,10 +76,11 @@ startRun(){
     if [ "$apiCheckResult" -gt "0" ];then
         echo "API接口检查失败"
         # echo "[检测到存在对外接口删除或修改](${logShowUrl}${commentLog});" | tee -a comment.txt
-        cat ${commentLog} | tee -a comment.txt
-        sed -i '1i [API接口检查]:\nAPI接口检查检测到存在对外接口删除:' comment.txt
+        cat ${commentLog} | tee comment.txt
+        echo -e "检测到存在对外接口删除和修改,请联系系统开发review:\n/assign @liujianqiang-niu\n/hold" | tee -a comment.txt
         # 4. 添加评论
         python3 -c "from postAction import createPRComment; createPRComment('api-check')"
+        python3 -c "from postAction import addReviewers; addReviewers()"
         # exit 1
     else
         echo "API接口检查成功"
