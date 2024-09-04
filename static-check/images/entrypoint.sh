@@ -42,6 +42,16 @@ current_date=$(date +%Y%m%d)
 logShowUrl="http://ciossapi-dev.uniontech.com/iso/ci-prow/${current_date}/static-check/${REPO_OWNER}/${REPO_NAME}/${PULL_NUMBER}/${PULL_PULL_SHA}/"
 logUploaUrl="s3://iso/ci-prow/${current_date}/static-check/${REPO_OWNER}/${REPO_NAME}/${PULL_NUMBER}/${PULL_PULL_SHA}/"
 kanbanUrl="https://prow.cicd.getdeepin.org/log?job=static-check&id=${BUILD_ID}"
+logMsg1='''
+<details>
+  <summary>详情</summary>
+
+```ruby
+'''
+logMsg2='''
+``` 
+</details>
+'''
 
 # 下载最新代码
 downloadLatestCode(){
@@ -98,10 +108,9 @@ startCppCheck(){
     errNum=$(egrep "[[:space:]]+<error .*severity=\"error\"" $commentLog | wc -l || true)
     if [ "$errNum" -gt "0" ];then
         echo "cppcheck检查失败"
-        cat $commentLog
-        echo "[cppcheck检查失败, 检测到${errNum}个error](${kanbanUrl});" | tee -a comment.txt
-        # cat $commentLog | tee -a comment.txt
-        # sed -i "1i cppcheck检测到${errNum}个error;" comment.txt
+        resultInfoMsg=$(cat $commentLog)
+        logMsgHead="- cppcheck检查失败, 检测到${errNum}个error;"
+        echo "${logMsgHead}${logMsg1}${resultInfoMsg}${logMsg2}" | tee -a comment.txt
     else
         echo "cppcheck检查成功"
     fi
@@ -120,10 +129,9 @@ startTscancode(){
     errNum=$(egrep "[[:space:]]+<error .*severity=\"Serious\"|[[:space:]]+<error .*severity=\"Critical\"" $commentLog | wc -l || true)
     if [ "$errNum" -gt "0" ];then
         echo "tscancode检查失败"
-        cat $commentLog
-        echo "[tscancode检查失败, 检测到${errNum}个error](${kanbanUrl});" | tee -a comment.txt
-        # cat $commentLog | tee -a comment.txt
-        # echo "1i tscancode检测到${errNum}个error;" comment.txt
+        resultInfoMsg=$(cat $commentLog)
+        logMsgHead="- tscancode检查失败, 检测到${errNum}个error;"
+        echo "${logMsgHead}${logMsg1}${resultInfoMsg}${logMsg2}" | tee -a comment.txt
     else
         echo "tscancode检查成功"
     fi
@@ -142,10 +150,9 @@ startGosec(){
     fi
     if [ "$errNum" -gt "0" ];then
         echo "gosec检查失败"
-        cat $commentLog
-        echo "[gosec检查失败, 检测到${errNum}个error](${kanbanUrl});" | tee -a comment.txt
-        # cat $commentLog | tee -a comment.txt
-        # sed -i "1i gosec检测到${errNum}个error;" comment.txt
+        resultInfoMsg=$(cat $commentLog)
+        logMsgHead="- gosec检查失败, 检测到${errNum}个error;"
+        echo "${logMsgHead}${logMsg1}${resultInfoMsg}${logMsg2}" | tee -a comment.txt
     else
         echo "gosec检查成功"
     fi
@@ -170,10 +177,9 @@ startGolangciLint(){
     errNum=$(egrep "[[:space:]]+<error .*message=" ${commentLog} | wc -l || true)
     if [ "$errNum" -gt "0" ];then
         echo "golangci-lint检查失败"
-        cat $commentLog
-        echo "[golangci-lint检查失败, 检测到${errNum}个error](${kanbanUrl});" | tee -a comment.txt
-        # cat $commentLog | tee -a comment.txt
-        # sed -i "1i golangci-lint检测到${errNum}个error;" comment.txt
+        resultInfoMsg=$(cat $commentLog)
+        logMsgHead="- golangci-lint检查失败, 检测到${errNum}个error;"
+        echo "${logMsgHead}${logMsg1}${resultInfoMsg}${logMsg2}" | tee -a comment.txt
     else
         echo "golangci-lint检查成功"
     fi
@@ -189,10 +195,9 @@ startShellCheck(){
     errNum=$(egrep "severity='error'" ${commentLog} | wc -l || true)
     if [ "$errNum" -gt "0" ];then
         echo "shellcheck检查失败"
-        cat $commentLog
-        echo "[shellcheck检查失败, 检测到${errNum}个error](${kanbanUrl});" | tee -a comment.txt
-        # cat $commentLog | tee -a comment.txt
-        # sed -i "1i shellcheck检测到${errNum}个error;" comment.txt
+        resultInfoMsg=$(cat $commentLog)
+        logMsgHead="- shellcheck检查失败, 检测到${errNum}个error;"
+        echo "${logMsgHead}${logMsg1}${resultInfoMsg}${logMsg2}" | tee -a comment.txt
     else
         echo "shellcheck检查成功"
     fi

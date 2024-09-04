@@ -9,8 +9,8 @@ REPO_NAME = os.environ.get("REPO_NAME", "test-ci-check")
 # REPO = os.environ.get("REPO", "reviews-team-test/test_jenkins")
 PULL_NUMBER = os.environ.get("PULL_NUMBER", "1")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-# reviewers = os.environ.get("reviewers", "liujianqiang-niu")
-reviewers = os.environ.get("reviewers", "ckux")
+reviewers = os.environ.get("reviewers", "liujianqiang-niu")
+# reviewers = os.environ.get("reviewers", "ckux")
 reviewer_teams = os.environ.get("reviewer_teams", "ckux-team")
 comment_path = os.environ.get("comment_path", "./comment.txt")
 
@@ -170,11 +170,11 @@ def createIssueComment(commenMsg):
 
 def createPRComment(checkType):
     if checkType == 'debian-check':
-        commenHead = '\\[Debian检查\\]'      
+        commenHead = '> [!WARNING]\n\\[Debian检查\\]'      
     if checkType == 'api-check':
-        commenHead = '\\[API接口检查\\]'
+        commenHead = '> [!WARNING]\n\\[API接口检查\\]'
     if checkType == 'static-check':
-        commenHead = '\\[静态代码检查\\]'
+        commenHead = '> [!NOTE]\n\\[静态代码检查\\]'
     commentFile = 'comment.txt'
     writeHeadToCommentFile(commenHead, commentFile)
     commenMsg = ''

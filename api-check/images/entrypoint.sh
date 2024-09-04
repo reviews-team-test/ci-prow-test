@@ -33,6 +33,16 @@ fi
 current_date=$(date +%Y%m%d)
 logShowUrl="http://ciossapi-dev.uniontech.com/iso/ci-prow/${current_date}/api-check/${REPO_OWNER}/${REPO_NAME}/${PULL_NUMBER}/${PULL_PULL_SHA}/"
 logUploaUrl="s3://iso/ci-prow/${current_date}/api-check/${REPO_OWNER}/${REPO_NAME}/${PULL_NUMBER}/${PULL_PULL_SHA}/"
+logMsg1='''
+<details>
+  <summary>详情</summary>
+
+```ruby
+'''
+logMsg2='''
+``` 
+</details>
+'''
 
 # 1. 下载代码
 downloadLatestCode(){
@@ -75,9 +85,10 @@ startRun(){
     apiCheckResult=$(egrep "\[Chg_exprort_fun\]|\[Del_export_fun\]" ${commentLog} | wc -l || true)
     if [ "$apiCheckResult" -gt "0" ];then
         echo "API接口检查失败"
-        # echo "[检测到存在对外接口删除或修改](${logShowUrl}${commentLog});" | tee -a comment.txt
-        cat ${commentLog} | tee comment.txt
-        echo -e "检测到存在对外接口删除和修改,请联系系统开发review:\n/assign @liujianqiang-niu\n/hold" | tee -a comment.txt
+        resultInfoMsg=$(cat $commentLog)
+        logMsgHead="- 检测到存在对外接口删除和修改;"
+        echo "${logMsgHead}${logMsg1}${resultInfoMsg}${logMsg2}" | tee -a comment.txt
+        echo -e "请联系系统开发review:\n/assign @liujianqiang-niu\n/hold" | tee -a comment.txt
         # 4. 添加评论
         python3 -c "from postAction import createPRComment; createPRComment('api-check')"
         python3 -c "from postAction import addReviewers; addReviewers()"
