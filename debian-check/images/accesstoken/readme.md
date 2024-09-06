@@ -7,7 +7,7 @@ Debian检查根据报错提示信息分为3类:
 - 检测到敏感词**变动
 
 ### 检测到debian目录文件有变更
-当PR中变更文件(除了"debian/changelog", "debian/copyright", "debian/compat", "debian/source/format")包含debian目录下的文件，则显示该错误信息。
+当PR中变更文件包含debian目录下的文件(除了"debian/changelog", "debian/copyright", "debian/compat", "debian/source/format")，则显示该错误信息。
 
 例如评论中显示:
 > [!WARNING]

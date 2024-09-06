@@ -169,12 +169,13 @@ def createIssueComment(commenMsg):
         print("评论成功")
 
 def createPRComment(checkType):
+    detailUrl = f'https://github.com/reviews-team-test/infra-settings/blob/master/services/prow/config/jobs/images/{checkType}/readme.md'
     if checkType == 'debian-check':
-        commenHead = '> [!WARNING]\n\\[Debian检查\\]'      
+        commenHead = f'> [!WARNING]\n[[Debian检查]]({detailUrl})'      
     if checkType == 'api-check':
-        commenHead = '> [!WARNING]\n\\[API接口检查\\]'
+        commenHead = f'> [!WARNING]\n[[API接口检查]]({detailUrl})'
     if checkType == 'static-check':
-        commenHead = '> [!NOTE]\n\\[静态代码检查\\]'
+        commenHead = f'> [!NOTE]\n[[静态代码检查]]({detailUrl})'
     commentFile = 'comment.txt'
     writeHeadToCommentFile(commenHead, commentFile)
     commenMsg = ''
