@@ -24,8 +24,8 @@ RUN apk --no-cache add py3-requests git quilt s3cmd; apk upgrade musl; \
     # build, install universal-ctags
     git clone http://github.com/universal-ctags/ctags.git ~/ctags && \
     cd ~/ctags && ./autogen.sh && \
-    ./configure --program-prefix=/usr/local && \
-    make && make install && ln -s /usr/local/bin/ctags /usr/bin/ctags-universal && \
+    ./configure && make && make install && \
+    ln -s /usr/local/bin/ctags /usr/bin/ctags-universal && \
      # cleanup
     cd ~ && rm -rf ctags && apk del build-deps
 
