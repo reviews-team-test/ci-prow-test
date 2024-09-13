@@ -219,7 +219,7 @@ def debianKeyWordsCheck(keyJson, fail_check_number):
     else:
       print(f"[PASS]: 敏感词{key_list}检查通过")
     print("debianKeyWordsCheck end")
-  return fail_check_number, resultInfo
+  return fail_check_number
 
 # debian/changelog版本检查，需要先下载debian/changelog文件
 def debianVersionCheck(contents_url, fail_check_number):
