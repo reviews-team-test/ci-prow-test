@@ -2,6 +2,7 @@
 import os
 import requests
 import time
+import json
 
 # 环境变量中获取参数
 REPO_OWNER = os.environ.get("REPO_OWNER", "peeweep-test")
@@ -13,8 +14,10 @@ reviewers = os.environ.get("reviewers", "liujianqiang-niu")
 # reviewers = os.environ.get("reviewers", "ckux")
 reviewer_teams = os.environ.get("reviewer_teams", "ckux-team")
 comment_path = os.environ.get("comment_path", "./comment.txt")
-
 REPO = REPO_OWNER + '/' + REPO_NAME
+
+PULL_PULL_SHA = os.environ.get("PULL_PULL_SHA", "c8daa46ae1c65d28bfcea09301cecca3092aa8cd") #github.sha
+BUILD_ID = os.environ.get("BUILD_ID", "1844248090601590784") #github.run_id
 
 # 重试装饰器
 def retry(tries=3, delay=1):
@@ -160,7 +163,6 @@ def writeHeadToCommentFile(content, commentFile):
 # 创建不同类型检查的PR/issue评论
 def createIssueComment(commenMsg):
     url = f'https://api.github.com/repos/{REPO}/issues/{PULL_NUMBER}/comments'
-    # print(f'apiurl is {url}')
     data = { "body": commenMsg }
     response = requests.post(url, json=data, headers=getHeaders(GITHUB_TOKEN))
     if response.status_code != 200 and response.status_code != 201:
@@ -182,3 +184,71 @@ def createPRComment(checkType):
     with open(commentFile, 'r', encoding='utf-8') as fp:
       commenMsg = fp.read()
     createIssueComment(commenMsg)
+    
+#发送数据到明道云
+def send_webhook_request(push_info):
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    url = "https://cooperation.uniontech.com/api/workflow/hooks/NjZjZWU4ZTkwYjEwOTIwMDc0MmU3ZDIz"
+    print(json.dumps(push_info))
+    try:
+        response = requests.post(url, data=json.dumps(push_info), headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending webhook request: {e}")
+        return None
+
+#获取提交信息
+@retry(tries=3, delay=1)
+def get_pr_info():
+    url = f"https://api.github.com/repos/{REPO}/pulls/{PULL_NUMBER}"
+    response = requests.get(url).json()
+    global pr_type
+    global pr_base_branch
+    global commit_author
+    pr_type = response['state'].title()
+    pr_base_branch = response['base']['ref']
+    commit_author = response['user']['login']
+
+#获取运行时间
+@retry(tries=3, delay=1)
+def get_run_timeing():
+    url = f"https://api.github.com/repos/{REPO}/actions/runs/{RUNID}/timing"
+    response = requests.get(url)
+    secends = 0
+    if response.status_code == 200:
+        secends = int(round(response.json()['run_duration_ms']/1000))
+        return secends
+    
+def sendData(TESTTYPE, JOBSTATUS, STATUS, RESULT, DURING):
+    get_pr_info()
+    commitInfo = {
+        "platform": "Github",
+        "type": pr_type,
+        "branch": pr_base_branch,
+        "project": REPO,
+        "authorEmail": "test@test.com",
+        "changeUrl": f"https://github.com/{REPO}/pull/{PULL_NUMBER}",
+        "author": commit_author,
+        "number": PULL_NUMBER,
+        "revision": PULL_PULL_SHA
+    }
+    job_type = TESTTYPE.split('Check')[0] + '-check'
+    testResults = {
+        "status": STATUS,
+        "result": RESULT,
+        "log": f"https://prow.cicd.getdeepin.org/log?job={job_type}&id={BUILD_ID}",
+        "during": DURING
+    }
+    push_info = {
+        "commitInfo": json.dumps(commitInfo),
+        "jobUrl": f"https://prow.cicd.getdeepin.org/log?job={job_type}&id={BUILD_ID}",
+        "jobStatus": JOBSTATUS,
+        "testType": TESTTYPE,
+        "testVersion": "2500",
+        "testResults": json.dumps(testResults)
+    }
+    send_webhook_request(push_info)

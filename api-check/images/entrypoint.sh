@@ -87,6 +87,7 @@ startRun(){
     apiCheckResult=$(egrep "\[Chg_exprort_fun\]|\[Del_export_fun\]" ${commentLog} | wc -l || true)
     if [ "$apiCheckResult" -gt "0" ];then
         echo "API接口检查失败"
+        apiCheckStatus='否'
         resultInfoMsg=$(cat $commentLog)
         logMsgHead="- 检测到存在对外接口删除和修改;"
         echo "${logMsgHead}${logMsg1}${resultInfoMsg}${logMsg2}" | tee -a comment.txt
@@ -97,10 +98,29 @@ startRun(){
         # exit 1
     else
         echo "API接口检查成功"
+        apiCheckStatus='是'
     fi
     s3cmd put ${commentLog} "${logUploaUrl}${commentLog}" || true
 }
 
-downloadLatestCode
-downloadDeveloperCode
-startRun
+main(){
+    starttime=$(date +%s)
+    apiCheckStatus='NA'
+    apiCheckResult=''
+    downloadLatestCode
+    downloadDeveloperCode
+    startRun
+    [ $? -eq 0 ] && jobStatus='success' || jobStatus='failure'
+    endtime=$(date +%s)
+    duration=$((endtime-starttime))
+    python3 -c "
+from postAction import sendData
+import sys
+str1 = sys.argv[1]
+str2 = sys.argv[2]
+str3 = sys.argv[3]
+str4 = sys.argv[4]
+sendData('apiCheck', str1, str2, str3, str4)" "${jobStatus}" "${apiCheckStatus}" "${apiCheckResult}" "${duration}"
+}
+
+main

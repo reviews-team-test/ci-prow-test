@@ -3,20 +3,31 @@
 import os
 import requests
 import json
+import datetime
+import re
 import postAction
 
+# repo_owner = "peeweep-test"
+# repo_name = "test-ci-check"
+# pull_number = '1'
+# pull_pull_sha = "900c427f788006210c8cdcee47a7f55cdaa1c7c4"
+# build_id = "1234"
+repo_owner = "deepin-community"
+repo_name = "golang-github-grpc-ecosystem-grpc-opentracing"
+pull_number = '2'
+pull_pull_sha = 'f10699d87846a76613eb10dc29fcb1208abb7c04'
+build_id = "1844998504125042688"
 # 环境变量中获取参数
-REPO_OWNER = os.environ.get("REPO_OWNER", "peeweep-test")
-REPO_NAME = os.environ.get("REPO_NAME", "test-ci-check")
-PULL_NUMBER = os.environ.get("PULL_NUMBER", "1")
-PULL_PULL_SHA = os.environ.get("PULL_PULL_SHA", "900c427f788006210c8cdcee47a7f55cdaa1c7c4")
-BUILD_ID = os.environ.get("BUILD_ID", "1234")
+REPO_OWNER = os.environ.get("REPO_OWNER", repo_owner)
+REPO_NAME = os.environ.get("REPO_NAME", repo_name)
+PULL_NUMBER = os.environ.get("PULL_NUMBER", pull_number)
+PULL_PULL_SHA = os.environ.get("PULL_PULL_SHA", pull_pull_sha)
+BUILD_ID = os.environ.get("BUILD_ID", build_id)
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     
 REPO = REPO_OWNER + '/' + REPO_NAME
 
-# 初始检查失败数量
-fail_check_number = 0
+
 # debian前缀检查文件白名单
 exFilesLstForDebian = ["debian/changelog", "debian/copyright", "debian/compat", "debian/source/format"]
 # 敏感词检查文件后缀白名单
@@ -27,7 +38,10 @@ keyJson = {
   "modify": "getcap,setcap,lshw,dmidecode",
   "all": "export,unset"
 }
-      
+
+def get_run_time():
+  return datetime.datetime.now()
+
 def getRequest(url):
     response = requests.get(url)
     if response.status_code == 200:
@@ -70,17 +84,15 @@ def get_change_files():
         print(f"[ERR]: 异常报错-{e}")
 
 # debian前缀检查和debian版本
-def debianPreCheck(fail_check_number):
+def debianPreCheck():
     print('debianPreCheck start')
+    debianPreCheck_result = ''
     resulyJson = get_change_files()
     resultLst = []
     for fileName in resulyJson:
       if fileName.startswith("debian/"):
         needCheckStatus = True
         if fileName in exFilesLstForDebian:
-          if fileName == 'debian/changelog':
-            if resulyJson[fileName]['status'] != 'removed':
-              fail_check_number = debianVersionCheck(resulyJson[fileName]['contents_url'], fail_check_number)
           needCheckStatus = False
         if fileName.startswith('debian/patches/') or fileName.startswith('debian/manpage.'):
           needCheckStatus = False
@@ -90,24 +102,78 @@ def debianPreCheck(fail_check_number):
           resultLst.append(fileName)
     if resultLst:
       writeCommentFile(f"- 检测到debian目录文件有变更: {','.join(resultLst)}")
-      fail_check_number += 1
+      debianPreCheck_result += '1|'
     else:
+      debianPreCheck_result += '0|'
       print("[PASS]: debian前缀检查通过")
+    
+    versionCheckPass = True
+    if 'debian/changelog' in list(resulyJson.keys()):
+      if resulyJson['debian/changelog']['status'] != 'removed':
+        if debianVersionCheck(resulyJson['debian/changelog']['contents_url']) != 0:
+          versionCheckPass = False
+    if versionCheckPass:
+      debianPreCheck_result += '0|'
+    else:
+      debianPreCheck_result += '1|'
     print('debianPreCheck end')
-    return fail_check_number
+    return debianPreCheck_result
 
 # checkType: 1, 在增加和修改内容筛选敏感词
 def filter_keys_in_modify(content, keyLst):
     strJson = {}
+    capLst = ['setcap', 'getcap']
+    strJson = getCapInfo(content, capLst, strJson)
+    tempkeyLst = keyLst.copy()
+    tempkeyLst.remove('setcap')
+    tempkeyLst.remove('getcap')
     for fileName, patchContent in content.items():
       for lineContent in patchContent['b']:
-        for keyStr in keyLst:
-          if keyStr in lineContent:
-            if keyStr not in list(strJson.keys()):
-              strJson[keyStr] = {}
-            if fileName not in list(strJson[keyStr].keys()):
-              strJson[keyStr][fileName] = []
-            strJson[keyStr][fileName].append(lineContent)
+        if all(not lineContent.lstrip(' \t\n').startswith(starting) for starting in ['#', '//']):
+          for keyStr in tempkeyLst:
+            newkeyStr = keyStr + ' '
+            if newkeyStr in lineContent:
+              if keyStr not in list(strJson.keys()):
+                strJson[keyStr] = {}
+              if fileName not in list(strJson[keyStr].keys()):
+                strJson[keyStr][fileName] = []
+              strJson[keyStr][fileName].append(lineContent)
+    return strJson
+        
+def getCapInfo(content, capLst, strJson):
+    fileCapLst = ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_DAC_READ_SEARCH', 'CAP_FOWNER', 'CAP_FSETID', 'CAP_KILL', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETPCAP', 'CAP_LINUX_IMMUTABLE',
+               'CAP_NET_BIND_SERVICE', 'CAP_NET_BROADCAST', 'CAP_NET_ADMIN', 'CAP_NET_RAW', 'CAP_IPC_LOCK', 'CAP_IPC_OWNER', 'CAP_SYS_MODULE', 'CAP_SYS_RAWIO', 'CAP_SYS_CHROOT',
+               'CAP_SYS_PTRACE', 'CAP_SYS_PACCT', 'CAP_SYS_ADMIN', 'CAP_SYS_BOOT', 'CAP_SYS_NICE', 'CAP_SYS_RESOURCE', 'CAP_SYS_TIME', 'CAP_SYS_TTY_CONFIG', 'CAP_MKNOD',
+               'CAP_LEASE', 'CAP_SETFCAP', 'CAP_AUDIT_WRITE', 'CAP_AUDIT_CONTROL', 'CAP_MAC_OVERRIDE', 'CAP_MAC_ADMIN', 'CAP_SYSLOG']
+    for fileName, patchContent in content.items():
+      for lineContent in patchContent['b']:
+        if all(not lineContent.lstrip(' \t\n').startswith(starting) for starting in ['#', '//']):
+          for keyStr in capLst:
+            isAdd = False
+            newkeyStr = keyStr + ' '
+            if newkeyStr in lineContent:
+              if keyStr == 'setcap':
+                keystrafter = lineContent.split(newkeyStr)[1]
+                if keystrafter.endswith('*/'):
+                    keystrafter = re.sub(r"/\*.*?\*/", "", keystrafter, flags=re.DOTALL)
+                if '//' in keystrafter:
+                    keystrafter = re.sub(r"//.*$", "", keystrafter)
+                if '#' in keystrafter:
+                    keystrafter = re.sub(r"#.*$", "", keystrafter)
+                if len(keystrafter.split()) >= 2:
+                  keystrafter = keystrafter.split()[-2]
+                  for filecap in fileCapLst:
+                    if any(keystrafter.startswith(starting) for starting in [filecap, filecap.lower(), "'"+filecap, '"'+filecap, "'"+filecap.lower(), '"'+filecap.lower()]):
+                        isAdd = True
+              if keyStr == 'getcap' or "getcap -r " in lineContent:
+                isAdd = True
+              if isAdd:
+                if any(lineContent.split(newkeyStr)[0].endswith(ending) for ending in ["'", '"']) or linecontent.split(newkeyStr)[0] == '':
+                  if keyStr not in list(strJson.keys()):
+                      strJson[keyStr] = {}
+                  if fileName not in list(strJson[keyStr].keys()):
+                      strJson[keyStr][fileName] = []
+                  strJson[keyStr][fileName].append(lineContent)
     return strJson
 
 # 在增加，删除和修改内容中筛选敏感词
@@ -181,17 +247,18 @@ def writeJsonFile(resultInfo, jsonFile):
       fp.write(json.dumps(resultInfo, indent=4, ensure_ascii=False))
 
 # 敏感词检查
-def debianKeyWordsCheck(keyJson, fail_check_number):
+def debianKeyWordsCheck(keyJson):
   # modify: 在增加和修改内容筛选敏感词
   # all: 在修改,删除和增加内容筛选敏感词
   print("debianKeyWordsCheck start")
+  fail_check_num = 0
   resultInfo = {}
   for check_type in keyJson:
     key_list = keyJson[check_type].split(',') #关键字以','号分隔
     resultInfo = filter_keywords(pfInfo, key_list, check_type)
   
     if resultInfo:
-        fail_check_number += 1
+        fail_check_num += 1
         import datetime
         current_date = datetime.date.today().strftime("%Y%m%d")
         commentLog = "{}-result-{}.json".format(BUILD_ID, check_type)
@@ -219,11 +286,12 @@ def debianKeyWordsCheck(keyJson, fail_check_number):
     else:
       print(f"[PASS]: 敏感词{key_list}检查通过")
     print("debianKeyWordsCheck end")
-  return fail_check_number
+  return fail_check_num
 
 # debian/changelog版本检查，需要先下载debian/changelog文件
-def debianVersionCheck(contents_url, fail_check_number):
+def debianVersionCheck(contents_url):
   print('debianVersionCheck start', contents_url)
+  fail_check_result = 0
   file_download_url = getRequest(contents_url)['download_url']
   # file_download_url = file_download_url.replace('raw.githubusercontent.com', 'raw.gitmirror.com')
   print("file_download_url is ", file_download_url)
@@ -247,14 +315,14 @@ def debianVersionCheck(contents_url, fail_check_number):
           print(f'[PASS]: debian/changelog版本检查通过:{version0}|{version1}')
         else:
           writeCommentFile(f'debian/changelog版本检查失败:{version0}|{version1}')
-          fail_check_number += 1
+          fail_check_result += 1
       else:
         if len(versionLst) != 1:
           print(f'[ERR]: 版本检查异常:{versionLst}')
         else:
           print(f'[PASS]: 版本检查通过:{versionLst}')
   print('debianVersionCheck end')
-  return fail_check_number
+  return fail_check_result
     
 # 写comment文件
 def writeCommentFile(commentMsg):
@@ -266,20 +334,30 @@ def writeCommentFile(commentMsg):
     print(f"[ERR]: writeCommentFile异常报错-{e}")
 
 # post步骤: 任务失败进行评论和添加reviewers
-def postStep(fail_check_number):
-    if fail_check_number != 0:
-      writeCommentFile("请联系系统开发review:\n/assign @liujianqiang-niu\n/hold")
-      postAction.createPRComment('debian-check')
-      postAction.addReviewers()
-      # exit(1)
+def postStep(fail_check_result, duration):
+    try:
+      if '1' in fail_check_result:
+        writeCommentFile("请联系系统开发review:\n/assign @liujianqiang-niu\n/hold")
+        postAction.createPRComment('debian-check')
+        postAction.addReviewers()
+        postAction.sendData('debianCheck', 'success', '否', fail_check_result, duration)
+        # exit(1)
+    except Exception as e:
+        print(f"Error post step run: {e}")
 
 # 检查开始前删除评论文件
 def preStep():
   if os.path.isfile('comment.txt'):
     os.remove('comment.txt')
-      
 
+start_time = get_run_time()
+fail_check_result = ''
 preStep()
-fail_check_number = debianPreCheck(fail_check_number)
-fail_check_number = debianKeyWordsCheck(keyJson, fail_check_number)
-postStep(fail_check_number)
+fail_check_result = debianPreCheck()
+if debianKeyWordsCheck(keyJson) != 0:
+  fail_check_result += '1'
+else:
+  fail_check_result += '0'
+end_time = get_run_time()
+duration = (end_time - start_time).seconds
+postStep(fail_check_result, duration)
